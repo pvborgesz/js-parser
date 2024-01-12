@@ -18,9 +18,10 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            overflow: hidden; /* Para garantir que o texto não saia do quadrado */
-            color: black; 
-            font-family: Arial, Helvetica, sans-serif;
+            overflow: hidden;
+            color: black;
+            font-family:  arial;
+            cursor: pointer; /* Estilo do cursor para indicar que o elemento é arrastável */
         }
     </style>
 </head>
@@ -28,13 +29,38 @@
 
 <input type="file" id="fileInput">
 <div id="mediaContainer"></div>
+<button id="exportButton">Exportar NCL Modificado</button>
 
 <script>
+
+    function updateNCLPositions(xmlDoc) {
+        document.querySelectorAll('.media').forEach(div => {
+            let media = xmlDoc.getElementById(div.id);
+            if (media) {
+                let leftProp = media.querySelector('property[name="left"]');
+                let topProp = media.querySelector('property[name="top"]');
+
+                if (!leftProp) {
+                    leftProp = xmlDoc.createElement('property');
+                    leftProp.setAttribute('name', 'left');
+                    media.appendChild(leftProp);
+                }
+                if (!topProp) {
+                    topProp = xmlDoc.createElement('property');
+                    topProp.setAttribute('name', 'top');
+                    media.appendChild(topProp);
+                }
+
+                leftProp.setAttribute('value', div.dataset.finalLeft + 'px');
+                topProp.setAttribute('value', div.dataset.finalTop + 'px');
+            }
+        });
+        return new XMLSerializer().serializeToString(xmlDoc);
+    }
+    let xmlDoc;
     document.getElementById('fileInput').addEventListener('change', function(event) {
         let file = event.target.files[0];
-        if (!file) {
-            return;
-        }
+        if (!file) return;
 
         let reader = new FileReader();
         reader.onload = function(e) {
@@ -70,7 +96,46 @@
                     div.style[name] = value;
                 });
 
+                // Adicionar funcionalidades de arrasto
+                div.addEventListener('mousedown', onDragStart);
+
                 return div;
+            }
+
+            function onDragStart(event) {
+                let mediaDiv = event.target.closest('.media');
+                if (!mediaDiv) return;
+
+                let shiftX = event.clientX - mediaDiv.getBoundingClientRect().left;
+                let shiftY = event.clientY - mediaDiv.getBoundingClientRect().top;
+
+                mediaDiv.style.position = 'absolute';
+                mediaDiv.style.zIndex = 1000;
+                document.body.append(mediaDiv);
+
+                moveAt(event.pageX, event.pageY);
+
+                function moveAt(pageX, pageY) {
+                    mediaDiv.style.left = pageX - shiftX + 'px';
+                    mediaDiv.style.top = pageY - shiftY + 'px';
+                }
+
+                function onDrag(event) {
+                    moveAt(event.pageX, event.pageY);
+                }
+
+                function onDragEnd() {
+                    document.removeEventListener('mousemove', onDrag);
+                    mediaDiv.removeEventListener('mouseup', onDragEnd);
+
+                    // Armazena as novas posições
+                    let rect = mediaDiv.getBoundingClientRect();
+                    mediaDiv.dataset.finalLeft = rect.left - mediaContainer.getBoundingClientRect().left;
+                    mediaDiv.dataset.finalTop = rect.top - mediaContainer.getBoundingClientRect().top;
+                }
+
+                document.addEventListener('mousemove', onDrag);
+                mediaDiv.addEventListener('mouseup', onDragEnd);
             }
 
             xmlDoc.querySelectorAll('media').forEach(media => {
@@ -81,6 +146,25 @@
 
         reader.readAsText(file);
     });
+
+    document.getElementById('exportButton').addEventListener('click', () => {
+        xmlDoc = xmlDoc || document.implementation.createDocument(null, 'ncl');
+        let updatedNCL = updateNCLPositions(xmlDoc);
+        download('modified.ncl', updatedNCL);
+    });
+
+    function download(filename, text) {
+        var element = document.createElement('a');
+        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+        element.setAttribute('download', filename);
+
+        element.style.display = 'none';
+        document.body.appendChild(element);
+
+        element.click();
+
+        document.body.removeChild(element);
+    }
 </script>
 </body>
 </html>
