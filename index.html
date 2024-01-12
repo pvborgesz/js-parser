@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Parser NCL para HTML</title>
+    <style>
+        #mediaContainer {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ccc;
+        }
+        .media {
+            position: absolute;
+            box-sizing: border-box;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            overflow: hidden; /* Para garantir que o texto não saia do quadrado */
+            color: black; 
+            font-family: Arial, Helvetica, sans-serif;
+        }
+    </style>
+</head>
+<body>
+
+<input type="file" id="fileInput">
+<div id="mediaContainer"></div>
+
+<script>
+    document.getElementById('fileInput').addEventListener('change', function(event) {
+        let file = event.target.files[0];
+        if (!file) {
+            return;
+        }
+
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            let nclString = e.target.result;
+
+            let parser = new DOMParser();
+            let xmlDoc = parser.parseFromString(nclString, "text/xml");
+
+            const colors = ['lightblue', 'lightgreen', 'lightcoral', 'lightyellow', 'lightgrey'];
+            let colorIndex = 0;
+
+            function createMediaElement(media) {
+                let div = document.createElement('div');
+                let mediaId = media.getAttribute('id');
+                div.id = mediaId;
+                div.className = 'media';
+                div.style.borderColor = colors[colorIndex % colors.length];
+                div.style.backgroundColor = colors[(colorIndex + 1) % colors.length];
+                colorIndex++;
+
+                let textNode = document.createElement('span');
+                textNode.textContent = mediaId;
+                div.appendChild(textNode);
+
+                media.querySelectorAll('property').forEach(prop => {
+                    let name = prop.getAttribute('name');
+                    let value = prop.getAttribute('value');
+
+                    if (!isNaN(value) && value !== '' && (name === 'width' || name === 'height' || name === 'left' || name === 'top')) {
+                        value += 'px';
+                    }
+
+                    div.style[name] = value;
+                });
+
+                return div;
+            }
+
+            xmlDoc.querySelectorAll('media').forEach(media => {
+                let mediaDiv = createMediaElement(media);
+                document.getElementById('mediaContainer').appendChild(mediaDiv);
+            });
+        };
+
+        reader.readAsText(file);
+    });
+</script>
+</body>
+</html>
