@@ -2,6 +2,12 @@
 <!-- Exemplo de sincronismo sem a interacao do usuario e com reuso apenas de relacoes-->
 <ncl id="syncEx" xmlns="http://www.ncl.org.br/NCL3.0/EDTVProfile">
 	<head>
+		<regionBase>
+			<region id="rgTv">
+				<region id="rgIntro" height="100%" width="100%" zIndex="1"/>
+				<region id="rgGame" height="100%" width="100%" zIndex="2"/>
+			</region>
+		</regionBase>
 		<connectorBase>
 			<causalConnector id="onBeginStart_delay">
 				<connectorParam name="delay"/>
